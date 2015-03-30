@@ -63,8 +63,16 @@
     Filter *filter = [self.filters objectAtIndex:filterIndexPath.row];
     cell = [tableView dequeueReusableCellWithIdentifier:@"filterCell"];
     if (cell != nil) {
+        BOOL isCurrentSelectFilter = (selectFilter != nil &&
+                                      [self.selectedFilterIndexPath compare: indexPath] == NSOrderedSame) ? YES : NO;
+        NSLog(@"isCurrentSelectFilter :%i",isCurrentSelectFilter);
         cell.textLabel.text = filter.name;
         cell.detailTextLabel.text = [filter.filterTypes objectAtIndex:filter.selectIndex];
+        cell.accessoryType =
+        isCurrentSelectFilter ?
+        UITableViewCellAccessoryCheckmark :
+        UITableViewCellAccessoryDisclosureIndicator;
+        
     }
     
     return cell;
@@ -102,6 +110,7 @@
     
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
     self.selectedFilterIndexPath = filterIndexPath;
+
 
 }
 
@@ -200,7 +209,27 @@
     
     [self.tableView beginUpdates];
     
-    if (_selectedFilterIndexPath != nil) {
+    NSMutableArray *indexPathsToReload =[[NSMutableArray alloc] init];
+    if (_selectedFilterIndexPath == nil
+        && selectedFilterIndexPath != nil) {
+        //Should add type cells.
+        Filter *newFilter =
+        selectedFilterIndexPath.row < self.filters.count ?
+        [self.filters objectAtIndex:selectedFilterIndexPath.row] :
+        nil;
+        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
+        NSInteger row = selectedFilterIndexPath.row + 1;
+        [newFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+            NSInteger currentRow = row + idx;
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:selectedFilterIndexPath.section];
+            [indexPaths addObject:indexPath];
+        }];
+        [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
+        [indexPathsToReload addObject:[selectedFilterIndexPath copy]];
+        
+    }else if (_selectedFilterIndexPath != nil
+              && selectedFilterIndexPath == nil) {
+        //Should remove type cells.
         Filter *oldFilter =
         _selectedFilterIndexPath.row < self.filters.count ?
         [self.filters objectAtIndex:_selectedFilterIndexPath.row] :
@@ -214,24 +243,106 @@
         }];
         
         [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-    }
-    
-    if (selectedFilterIndexPath != nil) {
+        [indexPathsToReload addObject:[_selectedFilterIndexPath copy]];
+        
+    }else if (selectedFilterIndexPath != nil
+              && selectedFilterIndexPath != nil) {
+        //Should remove and add type cells.
+        
+        //First remove type cells.
+        Filter *oldFilter =
+        _selectedFilterIndexPath.row < self.filters.count ?
+        [self.filters objectAtIndex:_selectedFilterIndexPath.row] :
+        nil;
+        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
+        NSInteger row = _selectedFilterIndexPath.row + 1;
+        [oldFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+            NSInteger currentRow = row + idx;
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:_selectedFilterIndexPath.section];
+            [indexPaths addObject:indexPath];
+        }];
+        
+        [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
+        //Second add type cells.
         Filter *newFilter =
         selectedFilterIndexPath.row < self.filters.count ?
         [self.filters objectAtIndex:selectedFilterIndexPath.row] :
         nil;
-        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
-        NSInteger row = selectedFilterIndexPath.row + 1;
+        indexPaths = [[NSMutableArray alloc] init];
+        row = selectedFilterIndexPath.row + 1;
         [newFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
             NSInteger currentRow = row + idx;
             NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:selectedFilterIndexPath.section];
             [indexPaths addObject:indexPath];
         }];
         [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
+        
+        [indexPathsToReload addObject:[_selectedFilterIndexPath copy]];
+        NSIndexPath *indexPathToReload;
+        if (selectedFilterIndexPath.row < _selectedFilterIndexPath.row) {
+            indexPathToReload = selectedFilterIndexPath;
+        }else{
+            row = selectedFilterIndexPath.row + oldFilter.filterTypes.count;
+            indexPathToReload = [NSIndexPath indexPathForRow:row inSection:selectedFilterIndexPath.section];
+        }
+        [indexPathsToReload addObject:indexPathToReload];
+
     }
-    
     _selectedFilterIndexPath = selectedFilterIndexPath;
+    if (indexPathsToReload.count > 0)
+        [self.tableView reloadRowsAtIndexPaths:indexPathsToReload
+                              withRowAnimation:UITableViewRowAnimationNone];
+//    
+//    
+//    
+//    if (_selectedFilterIndexPath != nil) {
+//        //Should remove type cells.
+//        Filter *oldFilter =
+//        _selectedFilterIndexPath.row < self.filters.count ?
+//        [self.filters objectAtIndex:_selectedFilterIndexPath.row] :
+//        nil;
+//        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
+//        NSInteger row = _selectedFilterIndexPath.row + 1;
+//        [oldFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+//            NSInteger currentRow = row + idx;
+//            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:_selectedFilterIndexPath.section];
+//            [indexPaths addObject:indexPath];
+//        }];
+//        
+//        [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
+//        
+//        //Remove the old filter row select state.
+//        NSArray *indexPathsToReload = @[[_selectedFilterIndexPath copy]];
+//        _selectedFilterIndexPath = selectedFilterIndexPath;
+//        //Reload execute after model changed.
+//        [self.tableView reloadRowsAtIndexPaths:indexPathsToReload
+//                              withRowAnimation:UITableViewRowAnimationNone];
+//    }else{
+//        _selectedFilterIndexPath = selectedFilterIndexPath;
+//    }
+//    
+//    if (selectedFilterIndexPath != nil) {
+//        //Should add type cells.
+//        Filter *newFilter =
+//        selectedFilterIndexPath.row < self.filters.count ?
+//        [self.filters objectAtIndex:selectedFilterIndexPath.row] :
+//        nil;
+//        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
+//        NSInteger row = selectedFilterIndexPath.row + 1;
+//        [newFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+//            NSInteger currentRow = row + idx;
+//            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:selectedFilterIndexPath.section];
+//            [indexPaths addObject:indexPath];
+//        }];
+//        [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
+//        
+//        //Get the new filter row select state.
+//        NSArray *indexPathsToReload = @[[_selectedFilterIndexPath copy]];
+//        //Reload execute after model changed.
+//        [self.tableView reloadRowsAtIndexPaths:indexPathsToReload
+//                              withRowAnimation:UITableViewRowAnimationNone];
+//    }
+//    
     
     [self.tableView endUpdates];
 
@@ -249,9 +360,9 @@
             NSIndexPath *indexPath = [NSIndexPath indexPathForRow:row inSection:self.selectedFilterIndexPath.section];
             [indexPaths addObject:indexPath];
         }
-        [self.tableView beginUpdates];
+//        [self.tableView beginUpdates];
         [self.tableView reloadRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationAutomatic];
-        [self.tableView endUpdates];
+//        [self.tableView endUpdates];
         
     }
 }
