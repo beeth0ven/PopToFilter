@@ -426,6 +426,7 @@
 				45F56F2B1AC7AE90004A0E08 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		45F56F2C1AC7AE90004A0E08 /* Build configuration list for PBXNativeTarget "PopToFilterTests" */ = {
 			isa = XCConfigurationList;
@@ -434,6 +435,7 @@
 				45F56F2E1AC7AE90004A0E08 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

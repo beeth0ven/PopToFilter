@@ -8,8 +8,11 @@
 
 #import "ViewController.h"
 #import "FilterTableViewController.h"
+#import "Filter.h"
 
 @interface ViewController ()
+
+@property (strong, nonatomic) NSArray *filters;
 
 @end
 
@@ -19,6 +22,7 @@
     if ([segue.identifier isEqualToString:@"filter"]) {
         if ([segue.destinationViewController isKindOfClass:[FilterTableViewController class]]) {
             FilterTableViewController *ftvc = (FilterTableViewController *)segue.destinationViewController;
+            ftvc.filters = self.filters;
             UIPopoverPresentationController *ppc = ftvc.popoverPresentationController;
             ppc.backgroundColor = ftvc.tableView.backgroundColor;
             ppc.delegate = self;
@@ -28,6 +32,16 @@
 
 - (UIModalPresentationStyle)adaptivePresentationStyleForPresentationController:(UIPresentationController *)controller {
     return UIModalPresentationNone;
+}
+
+
+- (NSArray *)filters {
+    if (!_filters) {
+        Filter *timeFilter = [Filter filterWithType: LJFilterTime];
+        Filter *kindFilter = [Filter filterWithType: LJFilterKind];
+        _filters = @[timeFilter,kindFilter];
+    }
+    return _filters;
 }
 
 

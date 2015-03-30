@@ -37,16 +37,18 @@
     
     UITableViewCell *cell;
     Filter *selectFilter = [self selectedFilter];
-    if (selectFilter != nil &&
-        self.selectedFilterIndexPath.row < indexPath.row &&
-        indexPath.row <= self.selectedFilterIndexPath.row + selectFilter.filterTypes.count) {
+    if ([self isTypeRowAtIndexPath:indexPath]) {
         //The row is type row.
         NSInteger typeRow = indexPath.row - self.selectedFilterIndexPath.row -1;
         NSString *typeString =
         [selectFilter.filterTypes objectAtIndex:typeRow];
         cell = [tableView dequeueReusableCellWithIdentifier:@"filterTypeCell"];
         cell.textLabel.text = typeString;
-        cell.textLabel.textColor = typeRow == selectFilter.selectIndex ? [UIColor redColor] : [UIColor blackColor];
+        cell.textLabel.textColor = typeRow == selectFilter.selectIndex ? EBBlue : [UIColor blackColor];
+
+        cell.accessoryType = typeRow == selectFilter.selectIndex ?
+                                        UITableViewCellAccessoryCheckmark :
+                                        UITableViewCellAccessoryNone;
         cell.indentationLevel = typeRow == 0 ? 1 : 2;
         return cell;
     }
@@ -54,8 +56,7 @@
     
     //The row is filter row.
     NSIndexPath *filterIndexPath = [indexPath copy];
-    if (selectFilter != nil &&
-        self.selectedFilterIndexPath.row + selectFilter.filterTypes.count < indexPath.row) {
+    if ([self isMoreThanTypeRowAtIndexPath:indexPath]) {
         //The row filter row which is more than type row.
         NSInteger row = indexPath.row - selectFilter.filterTypes.count;
         filterIndexPath = [NSIndexPath indexPathForRow:row inSection:indexPath.section];
@@ -68,11 +69,24 @@
         NSLog(@"isCurrentSelectFilter :%i",isCurrentSelectFilter);
         cell.textLabel.text = filter.name;
         cell.detailTextLabel.text = [filter.filterTypes objectAtIndex:filter.selectIndex];
-        cell.accessoryType =
-        isCurrentSelectFilter ?
-        UITableViewCellAccessoryCheckmark :
-        UITableViewCellAccessoryDisclosureIndicator;
+        cell.detailTextLabel.textColor = filter.selectIndex == 0 ? EBBackGround : EBBlue;
+        cell.accessoryType =    isCurrentSelectFilter ?
+                                UITableViewCellAccessoryCheckmark :
+                                UITableViewCellAccessoryDisclosureIndicator;
         
+        NSString *imageName =   isCurrentSelectFilter ?
+                                @"BottonIcon" :
+                                @"RightIcon";
+
+        UIImage *image = [UIImage imageNamed:imageName];
+        UIImageView *imageView = [[UIImageView alloc]
+                                  initWithFrame:CGRectMake(0,
+                                                           0,
+                                                           14,
+                                                           14)];
+        imageView.tintColor = isCurrentSelectFilter ? EBBlue : EBBackGround;
+        imageView.image = image;
+        cell.accessoryView = imageView;
     }
     
     return cell;
@@ -83,9 +97,7 @@
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     
     Filter *selectFilter = [self selectedFilter];
-    if (selectFilter != nil &&
-        self.selectedFilterIndexPath.row < indexPath.row &&
-        indexPath.row <= self.selectedFilterIndexPath.row + selectFilter.filterTypes.count) {
+    if ([self isTypeRowAtIndexPath:indexPath]) {
         //The selected row is type row.
         NSInteger typeRow = indexPath.row - self.selectedFilterIndexPath.row -1;
         selectFilter.selectIndex = typeRow;
@@ -95,13 +107,11 @@
     
     //The selected row is filter row.
     NSIndexPath *filterIndexPath = [indexPath copy];
-    if (selectFilter != nil &&
-        [self.selectedFilterIndexPath compare: indexPath] == NSOrderedSame) {
+    if ([self isSelectFilterRowAtIndexPath:indexPath]) {
         //The selected row is current selected filter row .
         filterIndexPath = nil;
         
-    }else if (selectFilter != nil &&
-        self.selectedFilterIndexPath.row + selectFilter.filterTypes.count < indexPath.row) {
+    }else if ([self isMoreThanTypeRowAtIndexPath:indexPath]) {
         //The selected row is more than type row.
         NSInteger row = indexPath.row - selectFilter.filterTypes.count;
         filterIndexPath = [NSIndexPath indexPathForRow:row inSection:indexPath.section];
@@ -109,10 +119,68 @@
     }
     
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    
+    if (self.selectedFilterIndexPath) {
+        UITableViewCell *selectedFilterCell = [tableView cellForRowAtIndexPath:self.selectedFilterIndexPath];
+        NSString *imageName = @"RightIcon";
+        UIImage *image = [UIImage imageNamed:imageName];
+        UIImageView *imageView = [[UIImageView alloc]
+                                  initWithFrame:CGRectMake(0,
+                                                           0,
+                                                           14,
+                                                           14)];
+        imageView.tintColor = EBBackGround;
+
+        imageView.image = image;
+        selectedFilterCell.accessoryView = imageView;
+//        selectedFilterCell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    }
+    if ([self isSelectFilterRowAtIndexPath:indexPath] == NO) {
+        UITableViewCell *cell = [tableView cellForRowAtIndexPath:indexPath];
+        NSString *imageName = @"BottonIcon";
+        UIImage *image = [UIImage imageNamed:imageName];
+        UIImageView *imageView = [[UIImageView alloc]
+                                  initWithFrame:CGRectMake(0,
+                                                           0,
+                                                           14,
+                                                           14)];
+        imageView.tintColor = EBBlue;
+        imageView.image = image;
+        cell.accessoryView = imageView;
+//        cell.accessoryType = UITableViewCellAccessoryCheckmark;
+    }
+    
     self.selectedFilterIndexPath = filterIndexPath;
 
-
 }
+
+
+- (BOOL)isLessThanTypeRowAtIndexPath:(NSIndexPath *)indexPath {
+    Filter *selectFilter = [self selectedFilter];
+    return  (selectFilter != nil &&
+             indexPath.row <= self.selectedFilterIndexPath.row);
+}
+
+- (BOOL)isTypeRowAtIndexPath:(NSIndexPath *)indexPath {
+    Filter *selectFilter = [self selectedFilter];
+    return  (selectFilter != nil &&
+             self.selectedFilterIndexPath.row < indexPath.row &&
+             indexPath.row <= self.selectedFilterIndexPath.row + selectFilter.filterTypes.count);
+}
+
+- (BOOL)isMoreThanTypeRowAtIndexPath:(NSIndexPath *)indexPath {
+    Filter *selectFilter = [self selectedFilter];
+    return (selectFilter != nil &&
+            self.selectedFilterIndexPath.row + selectFilter.filterTypes.count < indexPath.row);
+}
+
+- (BOOL)isSelectFilterRowAtIndexPath:(NSIndexPath *)indexPath {
+    Filter *selectFilter = [self selectedFilter];
+    return  (selectFilter != nil &&
+             [self.selectedFilterIndexPath compare: indexPath] == NSOrderedSame);
+}
+
+
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
     return @"筛选：";
@@ -187,14 +255,14 @@
     }
 }
 
-- (NSArray *)filters {
-    if (!_filters) {
-        Filter *timeFilter = [Filter filterWithType: LJFilterTime];
-        Filter *kindFilter = [Filter filterWithType: LJFilterKind];
-        _filters = @[timeFilter,kindFilter];
-    }
-    return _filters;
-}
+//- (NSArray *)filters {
+//    if (!_filters) {
+//        Filter *timeFilter = [Filter filterWithType: LJFilterTime];
+//        Filter *kindFilter = [Filter filterWithType: LJFilterKind];
+//        _filters = @[timeFilter,kindFilter];
+//    }
+//    return _filters;
+//}
 
 - (Filter *)selectedFilter {
     Filter *result = nil;
@@ -209,10 +277,23 @@
     
     [self.tableView beginUpdates];
     
-    NSMutableArray *indexPathsToReload =[[NSMutableArray alloc] init];
-    if (_selectedFilterIndexPath == nil
-        && selectedFilterIndexPath != nil) {
-        //Should add type cells.
+    if (_selectedFilterIndexPath != nil) {
+        Filter *oldFilter =
+        _selectedFilterIndexPath.row < self.filters.count ?
+        [self.filters objectAtIndex:_selectedFilterIndexPath.row] :
+        nil;
+        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
+        NSInteger row = _selectedFilterIndexPath.row + 1;
+        [oldFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+            NSInteger currentRow = row + idx;
+            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:_selectedFilterIndexPath.section];
+            [indexPaths addObject:indexPath];
+        }];
+        
+        [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
+    }
+    
+    if (selectedFilterIndexPath != nil) {
         Filter *newFilter =
         selectedFilterIndexPath.row < self.filters.count ?
         [self.filters objectAtIndex:selectedFilterIndexPath.row] :
@@ -225,124 +306,9 @@
             [indexPaths addObject:indexPath];
         }];
         [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-        [indexPathsToReload addObject:[selectedFilterIndexPath copy]];
-        
-    }else if (_selectedFilterIndexPath != nil
-              && selectedFilterIndexPath == nil) {
-        //Should remove type cells.
-        Filter *oldFilter =
-        _selectedFilterIndexPath.row < self.filters.count ?
-        [self.filters objectAtIndex:_selectedFilterIndexPath.row] :
-        nil;
-        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
-        NSInteger row = _selectedFilterIndexPath.row + 1;
-        [oldFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            NSInteger currentRow = row + idx;
-            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:_selectedFilterIndexPath.section];
-            [indexPaths addObject:indexPath];
-        }];
-        
-        [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-        [indexPathsToReload addObject:[_selectedFilterIndexPath copy]];
-        
-    }else if (selectedFilterIndexPath != nil
-              && selectedFilterIndexPath != nil) {
-        //Should remove and add type cells.
-        
-        //First remove type cells.
-        Filter *oldFilter =
-        _selectedFilterIndexPath.row < self.filters.count ?
-        [self.filters objectAtIndex:_selectedFilterIndexPath.row] :
-        nil;
-        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
-        NSInteger row = _selectedFilterIndexPath.row + 1;
-        [oldFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            NSInteger currentRow = row + idx;
-            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:_selectedFilterIndexPath.section];
-            [indexPaths addObject:indexPath];
-        }];
-        
-        [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-        //Second add type cells.
-        Filter *newFilter =
-        selectedFilterIndexPath.row < self.filters.count ?
-        [self.filters objectAtIndex:selectedFilterIndexPath.row] :
-        nil;
-        indexPaths = [[NSMutableArray alloc] init];
-        row = selectedFilterIndexPath.row + 1;
-        [newFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-            NSInteger currentRow = row + idx;
-            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:selectedFilterIndexPath.section];
-            [indexPaths addObject:indexPath];
-        }];
-        [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-        
-        [indexPathsToReload addObject:[_selectedFilterIndexPath copy]];
-        NSIndexPath *indexPathToReload;
-        if (selectedFilterIndexPath.row < _selectedFilterIndexPath.row) {
-            indexPathToReload = selectedFilterIndexPath;
-        }else{
-            row = selectedFilterIndexPath.row + oldFilter.filterTypes.count;
-            indexPathToReload = [NSIndexPath indexPathForRow:row inSection:selectedFilterIndexPath.section];
-        }
-        [indexPathsToReload addObject:indexPathToReload];
-
     }
+    
     _selectedFilterIndexPath = selectedFilterIndexPath;
-    if (indexPathsToReload.count > 0)
-        [self.tableView reloadRowsAtIndexPaths:indexPathsToReload
-                              withRowAnimation:UITableViewRowAnimationNone];
-//    
-//    
-//    
-//    if (_selectedFilterIndexPath != nil) {
-//        //Should remove type cells.
-//        Filter *oldFilter =
-//        _selectedFilterIndexPath.row < self.filters.count ?
-//        [self.filters objectAtIndex:_selectedFilterIndexPath.row] :
-//        nil;
-//        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
-//        NSInteger row = _selectedFilterIndexPath.row + 1;
-//        [oldFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-//            NSInteger currentRow = row + idx;
-//            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:_selectedFilterIndexPath.section];
-//            [indexPaths addObject:indexPath];
-//        }];
-//        
-//        [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-//        
-//        //Remove the old filter row select state.
-//        NSArray *indexPathsToReload = @[[_selectedFilterIndexPath copy]];
-//        _selectedFilterIndexPath = selectedFilterIndexPath;
-//        //Reload execute after model changed.
-//        [self.tableView reloadRowsAtIndexPaths:indexPathsToReload
-//                              withRowAnimation:UITableViewRowAnimationNone];
-//    }else{
-//        _selectedFilterIndexPath = selectedFilterIndexPath;
-//    }
-//    
-//    if (selectedFilterIndexPath != nil) {
-//        //Should add type cells.
-//        Filter *newFilter =
-//        selectedFilterIndexPath.row < self.filters.count ?
-//        [self.filters objectAtIndex:selectedFilterIndexPath.row] :
-//        nil;
-//        NSMutableArray *indexPaths = [[NSMutableArray alloc] init];
-//        NSInteger row = selectedFilterIndexPath.row + 1;
-//        [newFilter.filterTypes enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-//            NSInteger currentRow = row + idx;
-//            NSIndexPath *indexPath = [NSIndexPath indexPathForRow:currentRow inSection:selectedFilterIndexPath.section];
-//            [indexPaths addObject:indexPath];
-//        }];
-//        [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-//        
-//        //Get the new filter row select state.
-//        NSArray *indexPathsToReload = @[[_selectedFilterIndexPath copy]];
-//        //Reload execute after model changed.
-//        [self.tableView reloadRowsAtIndexPaths:indexPathsToReload
-//                              withRowAnimation:UITableViewRowAnimationNone];
-//    }
-//    
     
     [self.tableView endUpdates];
 
@@ -366,5 +332,8 @@
         
     }
 }
+
+
+
 
 @end
